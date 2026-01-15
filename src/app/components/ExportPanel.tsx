@@ -1,5 +1,5 @@
 import { Button } from "@/app/components/ui/button";
-import { AlertCircle, Upload, CheckCircle } from "lucide-react";
+import { AlertCircle, Upload, CheckCircle, Loader2 } from "lucide-react";
 
 interface PlaceholderPosition {
   x: number;
@@ -21,7 +21,9 @@ interface ExportPanelProps {
   nameHolder: NamePlaceholder;
   selectedTags: string[];
   selectedLanguages: string[];
+  username: string;
   onExport: () => void;
+  isUploading?: boolean;
 }
 
 const CANVAS_WIDTH = 1080;
@@ -33,12 +35,15 @@ export function ExportPanel({
   nameHolder,
   selectedTags,
   selectedLanguages,
+  username,
   onExport,
+  isUploading = false,
 }: ExportPanelProps) {
   const validations = {
     hasImage: !!backgroundImage,
     hasTags: selectedTags.length > 0,
     hasLanguages: selectedLanguages.length > 0,
+    hasUsername: username.trim().length > 0,
     imageInBounds:
       imageHolder.x >= 0 &&
       imageHolder.y >= 0 &&
@@ -69,6 +74,10 @@ export function ExportPanel({
           label="Language tags selected"
         />
         <ValidationItem
+          valid={validations.hasUsername}
+          label="Text placeholder provided"
+        />
+        <ValidationItem
           valid={validations.imageInBounds}
           label="Photo placeholder in bounds"
         />
@@ -80,15 +89,19 @@ export function ExportPanel({
 
       <Button
         onClick={onExport}
-        disabled={!allValid}
+        disabled={!allValid || isUploading}
         className={`w-full h-11 font-semibold text-sm transition-all duration-200 ${
-          allValid
+          allValid && !isUploading
             ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200 hover:shadow-xl'
             : 'bg-gray-300 cursor-not-allowed'
         }`}
       >
-        <Upload className="mr-2 h-4 w-4" />
-        {allValid ? 'Upload Template' : 'Complete Requirements'}
+        {isUploading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Upload className="mr-2 h-4 w-4" />
+        )}
+        {isUploading ? 'Uploading...' : allValid ? 'Upload Template' : 'Complete Requirements'}
       </Button>
 
       {!allValid && (

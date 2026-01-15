@@ -7,6 +7,7 @@ interface TagSelectorProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
   required?: boolean;
+  disabled?: boolean;
 }
 
 export function TagSelector({ 
@@ -15,7 +16,8 @@ export function TagSelector({
   availableTags,
   selectedTags, 
   onTagsChange,
-  required = false
+  required = false,
+  disabled = false
 }: TagSelectorProps) {
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -40,9 +42,12 @@ export function TagSelector({
           return (
             <button
               key={tag}
-              onClick={() => toggleTag(tag)}
+              onClick={() => !disabled && toggleTag(tag)}
+              disabled={disabled}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border-2 transition-all duration-150 ${
-                isSelected
+                disabled
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : isSelected
                   ? 'bg-amber-500 text-white border-amber-500 shadow-md hover:bg-amber-600'
                   : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
               }`}

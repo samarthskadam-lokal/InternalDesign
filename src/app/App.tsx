@@ -8,8 +8,9 @@ import { ImageStrokeSelector, type ImageStrokeStyle } from '@/app/components/Ima
 import { TextAlignmentSelector, type TextAlignment } from '@/app/components/TextAlignmentSelector';
 import { PreviewPanel } from '@/app/components/PreviewPanel';
 import { ExportPanel } from '@/app/components/ExportPanel';
+import { SuccessModal } from '@/app/components/SuccessModal';
 import { toast } from 'sonner';
-import lokalLogo from 'figma:asset/7f52afd4f9acd98b14c7800f5a0a27def664508d.png';
+import lokalLogo from '@/assets/lokal.png';
 
 interface ImagePlaceholder {
   x: number;
@@ -32,19 +33,11 @@ const getCanvasHeight = (aspectRatio: AspectRatio) => {
   return aspectRatio === '3:4' ? 1440 : 1920;
 };
 
-// Mock tags - in production these would be fetched from backend
-const OCCASION_TAGS = [
-  'Good Morning',
-  'Good Evening',
-  'Christmas',
-  'Pongal',
-  'Diwali',
-  'Quotes',
-  'Birthday',
-  'New Year',
-  'Anniversary',
-  'Motivational'
-];
+// Tags interface for API response
+interface Tag {
+  id: number;
+  title: string;
+}
 
 const LANGUAGE_TAGS = [
   'English',
@@ -70,11 +63,84 @@ export default function App() {
   const [textBackgroundStyle, setTextBackgroundStyle] = useState<TextBackgroundStyle>('none');
   const [imageStrokeStyle, setImageStrokeStyle] = useState<ImageStrokeStyle>('none');
   const [textAlignment, setTextAlignment] = useState<TextAlignment>('center');
+  const [username, setUsername] = useState<string>('');
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [occasionTags, setOccasionTags] = useState<Tag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState<boolean>(true);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   
   // Cropper state
   const [rawImage, setRawImage] = useState<string | null>(null);
   
   const canvasHeight = getCanvasHeight(aspectRatio);
+
+  // Fetch tags from API on component mount
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        setIsLoadingTags(true);
+        const response = await fetch('https://testapi.eazeapp.com/greetings/tags/');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tags: ${response.status}`);
+        }
+        const tags: Tag[] = await response.json();
+        console.log('Fetched tags:', tags);
+        setOccasionTags(tags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+        toast.error('Failed to load tags', {
+          description: 'Using default tags instead',
+        });
+        // Fallback to hardcoded tags if API fails
+        setOccasionTags([
+    {
+        "id": 10,
+        "title": "Motivational"
+    },
+    {
+        "id": 9,
+        "title": "Anniversary"
+    },
+    {
+        "id": 8,
+        "title": "New Year"
+    },
+    {
+        "id": 7,
+        "title": "Birthday"
+    },
+    {
+        "id": 6,
+        "title": "Quotes"
+    },
+    {
+        "id": 5,
+        "title": "Diwali"
+    },
+    {
+        "id": 4,
+        "title": "Pongal"
+    },
+    {
+        "id": 3,
+        "title": "Christmas"
+    },
+    {
+        "id": 2,
+        "title": "Good Evening"
+    },
+    {
+        "id": 1,
+        "title": "Good Morning"
+    }
+]);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+
+    fetchTags();
+  }, []);
   
   const handleRawImageUpload = (imageUrl: string) => {
     setRawImage(imageUrl);
@@ -127,41 +193,85 @@ export default function App() {
     });
   }, [aspectRatio, canvasHeight]);
 
-  const handleExport = () => {
-    // Convert to percentages for device-agnostic rendering
-    const payload = {
-      aspectRatio,
-      occasionTags: selectedOccasions,
-      languageTags: selectedLanguages,
-      backgroundImage: backgroundImage,
-      imagePlaceholder: {
+  const handleExport = async () => {
+    if (!backgroundImage) {
+      toast.error('Background image is required');
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      // Convert background image URL to blob/file
+      const response = await fetch(backgroundImage);
+      const blob = await response.blob();
+      
+      // Create form data as specified in the API
+      const formData = new FormData();
+      
+      // Add the background image file
+      formData.append('backgroundImage', blob, 'template-background.png');
+      
+      // Add aspect ratio
+      formData.append('aspectRatio', aspectRatio);
+      
+      // Add tag (using first occasion tag as the main tag)
+      if (selectedOccasions.length > 0) {
+        // Find the tag object from occasionTags array
+        const selectedTag = occasionTags.find(tag => tag.title === selectedOccasions[0]);
+        const tagId = selectedTag ? selectedTag.id.toString() : '3'; // Default to '3' if not found
+        formData.append('tag', tagId);
+      }
+      
+      // Add language tags
+      selectedLanguages.forEach(language => {
+        formData.append('languageTags', language);
+      });
+      
+      // Convert placeholders to percentages and format as JSON strings
+      const imagePlaceholderData = {
         x: (imageHolder.x / CANVAS_WIDTH) * 100,
         y: (imageHolder.y / canvasHeight) * 100,
-        diameter: (imageHolder.diameter / CANVAS_WIDTH) * 100,
-      },
-      namePlaceholder: {
+        width: (imageHolder.diameter / CANVAS_WIDTH) * 100,
+        height: (imageHolder.diameter / canvasHeight) * 100
+      };
+      
+      const namePlaceholderData = {
         x: (nameHolder.x / CANVAS_WIDTH) * 100,
         y: (nameHolder.y / canvasHeight) * 100,
         width: (nameHolder.width / CANVAS_WIDTH) * 100,
-        height: (nameHolder.height / canvasHeight) * 100,
-      },
-      textBackgroundStyle: textBackgroundStyle,
-      imageStrokeStyle: imageStrokeStyle,
-      textAlignment: textAlignment,
-    };
-
-    console.log('Export Payload:', payload);
-    
-    toast.success('Template uploaded successfully!', {
-      description: 'The template has been saved and is ready for end users.',
-    });
-    
-    // In production, this would send to backend:
-    // await fetch('/api/templates', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload)
-    // });
+        height: (nameHolder.height / canvasHeight) * 100
+      };
+      
+      formData.append('imagePlaceholder', JSON.stringify(imagePlaceholderData));
+      formData.append('namePlaceholder', JSON.stringify(namePlaceholderData));
+      
+      // Upload template to API
+      const uploadResponse = await fetch('https://testapi.eazeapp.com/greetings/templates/', {
+        method: 'POST',
+        headers: {
+          'Accept': '*/*',
+          'Connection': 'keep-alive',
+        },
+        body: formData
+      });
+      
+      if (uploadResponse.ok) {
+        const result = await uploadResponse.json();
+        console.log('Upload successful:', result);
+        setShowSuccessModal(true);
+      } else {
+        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload template', {
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const currentStep = !backgroundImage ? 1 : selectedOccasions.length === 0 || selectedLanguages.length === 0 ? 2 : 3;
@@ -273,11 +383,16 @@ export default function App() {
               <div className="space-y-5">
                 <TagSelector
                   title="Occasion Tags"
-                  description="Select occasions for this template"
-                  availableTags={OCCASION_TAGS}
+                  description={isLoadingTags ? "Loading tags..." : "Select occasions for this template"}
+                  availableTags={(() => {
+                    const tagTitles = occasionTags.map(tag => tag.title);
+                    console.log('Available tag titles:', tagTitles);
+                    return tagTitles;
+                  })()}
                   selectedTags={selectedOccasions}
                   onTagsChange={setSelectedOccasions}
                   required={true}
+                  disabled={isLoadingTags}
                 />
                 
                 <div className="h-px bg-gray-200" />
@@ -293,13 +408,40 @@ export default function App() {
               </div>
             </div>
 
-            {/* Step 4: Export */}
+            {/* Step 4: Username */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
                   currentStep >= 3 ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'
                 }`}>
                   4
+                </div>
+                <h2 className="text-sm font-bold text-gray-900">Text placeholder</h2>
+              </div>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700 mb-2 block">Please provide the text</span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                  />
+                </label>
+                <p className="text-xs text-gray-500">
+                  Username is required to upload templates
+                </p>
+              </div>
+            </div>
+
+            {/* Step 5: Export */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                  currentStep >= 3 ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  5
                 </div>
                 <h2 className="text-sm font-bold text-gray-900">Validate & Upload</h2>
               </div>
@@ -309,7 +451,9 @@ export default function App() {
                 nameHolder={nameHolder}
                 selectedTags={selectedOccasions}
                 selectedLanguages={selectedLanguages}
+                username={username}
                 onExport={handleExport}
+                isUploading={isUploading}
               />
             </div>
           </div>
@@ -366,7 +510,7 @@ export default function App() {
                 imageHolder={imageHolder}
                 nameHolder={nameHolder}
                 samplePhoto={SAMPLE_PHOTO}
-                sampleName="Rahul"
+                sampleName={username || "Enter text above"}
                 canvasWidth={CANVAS_WIDTH}
                 canvasHeight={canvasHeight}
                 textBackgroundStyle={textBackgroundStyle}
@@ -431,6 +575,14 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="🎉 Template Successfully Submitted!"
+        description="Your template has been uploaded and is now available for end users to customize with their own photos and details."
+      />
     </div>
   );
 }
