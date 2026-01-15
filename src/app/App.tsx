@@ -53,7 +53,7 @@ const LANGUAGE_TAGS = [
 ];
 
 // Sample photo for preview
-const SAMPLE_PHOTO = 'https://images.unsplash.com/photo-1724435811349-32d27f4d5806?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwcGhvdG8lMjBwZXJzb258ZW58MXx8fHwxNzY4NDY1OTgyfDA&ixlib=rb-4.1.0&q=80&w=1080';
+const SAMPLE_PHOTO = 'https://images.unsplash.com/photo-1600486913747-55e5470d6f40?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
 
 export default function App() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:4');

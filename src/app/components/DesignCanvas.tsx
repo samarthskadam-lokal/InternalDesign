@@ -111,7 +111,7 @@ export function DesignCanvas({
           width={nameHolder.width}
           height={nameHolder.height}
           canvasScale={scale}
-          label="User Name"
+          label="Place holder name"
           minWidth={200}
           maxWidth={800}
           canvasWidth={canvasWidth}
