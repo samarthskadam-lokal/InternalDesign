@@ -3,7 +3,7 @@ import { Upload, Image } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 
 interface ImageUploaderProps {
-  onImageUpload: (imageUrl: string) => void;
+  onImageUpload: (imageUrl: string, filename?: string) => void;
   hasImage: boolean;
 }
 
@@ -17,7 +17,7 @@ export function ImageUploader({ onImageUpload, hasImage }: ImageUploaderProps) {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      onImageUpload(base64String);
+      onImageUpload(base64String, file.name);
     };
     reader.readAsDataURL(file);
   };

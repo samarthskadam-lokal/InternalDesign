@@ -58,6 +58,7 @@ const SAMPLE_PHOTO = 'https://images.unsplash.com/photo-1600486913747-55e5470d6f
 export default function App() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:4');
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [originalFilename, setOriginalFilename] = useState<string | null>(null);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [textBackgroundStyle, setTextBackgroundStyle] = useState<TextBackgroundStyle>('none');
@@ -142,8 +143,11 @@ export default function App() {
     fetchTags();
   }, []);
   
-  const handleRawImageUpload = (imageUrl: string) => {
+  const handleRawImageUpload = (imageUrl: string, filename?: string) => {
     setRawImage(imageUrl);
+    if (filename) {
+      setOriginalFilename(filename);
+    }
   };
   
   const handleCropComplete = (croppedImageUrl: string) => {
@@ -210,7 +214,7 @@ export default function App() {
       const formData = new FormData();
       
       // Add the background image file
-      formData.append('backgroundImage', blob, 'template-background.png');
+      formData.append('backgroundImage', blob, originalFilename || 'template-background.png');
       
       // Add aspect ratio
       formData.append('aspectRatio', aspectRatio);
